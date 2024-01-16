@@ -1,0 +1,115 @@
+<?php
+
+require_once 'Database.php';
+
+class Car extends Database
+{
+    private $table = 'cars';
+    function __construct()
+    {
+        parent::__construct();
+    }
+
+    function getData()
+    {
+        $sql = "SELECT * FROM $this->table WHERE status = 1";
+        $query = mysqli_query($this->db, $sql);
+        while ($data = mysqli_fetch_array($query)) {
+            $cars[] = $data;
+        }
+        return $cars ?? '';
+    }
+
+    function getId($id)
+    {
+        $sql    = "SELECT * FROM $this->table WHERE id_car = '$id'";
+        $query  = mysqli_query($this->db, $sql);
+        if ($query->num_rows < 1) {
+            header('Location: products.php');
+            exit();
+        }
+        return mysqli_fetch_assoc($query);
+    }
+
+    function setData()
+    {
+        $name       = $_POST['name'];
+        $model      = $_POST['model'];
+        $year       = $_POST['year'];
+        $price      = $_POST['price'];
+        $desc       = $_POST['description'];
+
+        // image
+        $fileName   = $_FILES['car_image']['name'];
+        $exts       = array('png', 'jpg', 'jpeg');
+        $ext        = pathinfo($fileName, PATHINFO_EXTENSION);
+        if (!in_array($ext, $exts)) {
+            header('Location: products.php?status=' . $ext);
+            exit();
+        }
+
+        $finalFIle  = rand() . '_' . $fileName;
+        move_uploaded_file($_FILES['car_image']['tmp_name'], '../imgs/' . $finalFIle);
+        $sql        = "INSERT INTO $this->table 
+                        (name, model, tahun_produksi, harga, deskripsi, image_url)
+                        VALUES
+                        ('$name', '$model', '$year', '$price', '$desc', '$finalFIle')";
+        $query      = mysqli_query($this->db, $sql);
+        if (!$query) {
+            header('Location: products.php?status=gagal');
+            exit();
+        }
+        header('Location: products.php?status=success');
+        exit();
+    }
+
+    function setNewData($id)
+    {
+        $name       = $_POST['name'];
+        $model      = $_POST['model'];
+        $year       = $_POST['year'];
+        $price      = $_POST['price'];
+        $desc       = $_POST['description'];
+        $oldFile    = $_POST['old_image'];
+
+        // image
+        if (file_exists($_FILES['car_image']['tmp_name']) || is_uploaded_file($_FILES['car_image']['tmp_name'])) {
+            $fileName   = $_FILES['car_image']['name'];
+            $exts       = array('png', 'jpg', 'jpeg');
+            $ext        = pathinfo($fileName, PATHINFO_EXTENSION);
+
+            if (!in_array($ext, $exts)) {
+                header('Location: products.php?status=error_extention');
+                exit();
+            }
+
+            $finalFIle  = rand() . '_' . $fileName;
+            move_uploaded_file($_FILES['car_image']['tmp_name'], '../imgs/' . $finalFIle);
+            unlink('../imgs/' . $oldFile);
+        }
+        $file       = $finalFIle ?? $oldFile;
+        $sql        = "UPDATE $this->table SET
+                    name = '$name', model = '$model', tahun_produksi = '$year', harga = '$price', deskripsi = '$desc', image_url = '$file'
+                    WHERE id_car = '$id'";
+        $query      = mysqli_query($this->db, $sql);
+        if (!$query) {
+            header('Location: edit_product.php?id=' . $id . '&status=0');
+            exit();
+        }
+        header('Location: edit_product.php?id=' . $id . '&status=1');
+        exit();
+    }
+
+    function delete()
+    {
+        $id     = $_POST['del_id'];
+        $sql    = "DELETE FROM $this->table WHERE id_car = '$id'";
+        $query  = mysqli_query($this->db, $sql);
+        if (!$query) {
+            header('Location: products.php?status=0');
+            exit();
+        }
+        header('Location: products.php?status=1');
+        exit();
+    }
+}
